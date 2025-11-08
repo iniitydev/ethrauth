@@ -1,0 +1,6 @@
+{
+  "Datastore": {
+    "Type": "sqlite",
+    "Path": "/var/lib/netbird/signal.db"
+  }
+}

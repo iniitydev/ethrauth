@@ -13,6 +13,13 @@ services:
       - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
       - "traefik.http.routers.keycloak.tls=true"
       - "traefik.http.routers.keycloak.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.keycloak-secure.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.keycloak-secure.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.keycloak-secure.headers.stsPreload=true"
+      - "traefik.http.middlewares.keycloak-secure.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.keycloak-secure.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.keycloak-secure.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.keycloak-secure.headers.customFrameOptionsValue=SAMEORIGIN"
 
   postgres:
     restart: always

@@ -1,0 +1,17 @@
+{
+  "realm": "ethr",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "ethrsite-frontend",
+      "secret": "${ETHRSITE_CLIENT_SECRET}",
+      "publicClient": false,
+      "redirectUris": [
+        "${ETHRSITE_URL}/*"
+      ],
+      "webOrigins": [
+        "${ETHRSITE_URL}"
+      ]
+    }
+  ]
+}

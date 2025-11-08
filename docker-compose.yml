@@ -1,11 +1,11 @@
-version: '3.8'
-
 services:
   keycloak:
-    image: quay.io/keycloak/keycloak:24.0
+    build:
+      context: .
+      dockerfile: dockerfiles/keycloak.Dockerfile
+    entrypoint: ["infisical", "run", "--", "/opt/keycloak/bin/kc.sh", "start-dev", "--import-realm"]
     environment:
       - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
       - KC_HEALTH_ENABLED=true
       - KC_METRICS_ENABLED=true
       - KC_DB=postgres
@@ -26,14 +26,152 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres:15
+    build:
+      context: .
+      dockerfile: dockerfiles/postgres.Dockerfile
     environment:
       - POSTGRES_DB=keycloak
       - POSTGRES_USER=keycloak
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  zitadel:
+    build:
+      context: .
+      dockerfile: dockerfiles/zitadel.Dockerfile
+    entrypoint: ["infisical", "run", "--", "start-from-init", "--masterkeyFromEnv", "--tls", "http"]
+    environment:
+      - ZITADEL_DATABASE_POSTGRES_HOST=zitadel-postgres
+      - ZITADEL_DATABASE_POSTGRES_PORT=5432
+      - ZITADEL_DATABASE_POSTGRES_DATABASE=zitadel
+      - ZITADEL_DATABASE_POSTGRES_USER=zitadel
+      - ZITADEL_DATABASE_POSTGRES_SSL_MODE=disable
+      - ZITADEL_EXTERNALSECURE=false
+      - ZITADEL_URL=http://localhost:8081
+    ports:
+      - "8081:8080"
+    depends_on:
+      - zitadel-postgres
+    restart: unless-stopped
+    networks:
+      - ethr_platform
+
+  zitadel-postgres:
+    build:
+      context: .
+      dockerfile: dockerfiles/postgres.Dockerfile
+    entrypoint: ["infisical", "run", "--", "docker-entrypoint.sh", "postgres"]
+    environment:
+      - POSTGRES_DB=zitadel
+      - POSTGRES_USER=zitadel
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - "5433:5432"
+    volumes:
+      - zitadel_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - ethr_platform
+
+  netbird-management:
+    build:
+      context: .
+      dockerfile: dockerfiles/netbird.Dockerfile
+    entrypoint: ["infisical", "run", "--", "/usr/bin/management"]
+    restart: unless-stopped
+    depends_on:
+      - zitadel
+    networks:
+      - ethr_platform
+    volumes:
+      - ./netbird/management.json:/etc/netbird/management.json
+    ports:
+      - "33073:33073"
+
+  netbird-signal:
+    build:
+      context: .
+      dockerfile: dockerfiles/netbird.Dockerfile
+    entrypoint: ["infisical", "run", "--", "/usr/bin/signal"]
+    restart: unless-stopped
+    networks:
+      - ethr_platform
+    volumes:
+      - ./netbird/signal.json:/etc/netbird/signal.json
+    ports:
+      - "10000:10000"
+
+  netbird-coturn:
+    build:
+      context: .
+      dockerfile: dockerfiles/coturn.Dockerfile
+    entrypoint: ["infisical", "run", "--", "/usr/bin/turnserver"]
+    restart: unless-stopped
+    networks:
+      - ethr_platform
+    volumes:
+      - ./netbird/coturn.conf:/etc/coturn/turnserver.conf
+    ports:
+      - "3478:3478/udp"
+      - "49152-65535:49152-65535/udp"
+
+  nextcloud:
+    build:
+      context: .
+      dockerfile: dockerfiles/nextcloud.Dockerfile
+    entrypoint: ["infisical", "run", "--", "/entrypoint.sh", "apache2-foreground"]
+    restart: unless-stopped
+    ports:
+      - 8082:80
+    links:
+      - nextcloud-db
+    volumes:
+      - nextcloud_data:/var/www/html
+    environment:
+      - POSTGRES_HOST=nextcloud-db
+      - POSTGRES_DB=nextcloud
+      - POSTGRES_USER=nextcloud
+    depends_on:
+      - nextcloud-db
+    networks:
+      - ethr_platform
+
+  nextcloud-db:
+    build:
+      context: .
+      dockerfile: dockerfiles/postgres.Dockerfile
+    entrypoint: ["infisical", "run", "--", "docker-entrypoint.sh", "postgres"]
+    restart: unless-stopped
+    volumes:
+      - nextcloud_db_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=nextcloud
+      - POSTGRES_USER=nextcloud
+    networks:
+      - ethr_platform
+
+  ethr-connect:
+    build: ./gateway
+    ports:
+      - "8000:8000"
+    networks:
+      - ethr_platform
+
+  ethr-view:
+    build: ./view
+    ports:
+      - "3000:80"
+    networks:
+      - ethr_platform
+
 volumes:
   postgres_data:
+  zitadel_postgres_data:
+  netbird_data:
+  nextcloud_data:
+  nextcloud_db_data:
+
+networks:
+  ethr_platform:
+    external: true

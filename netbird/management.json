@@ -1,0 +1,11 @@
+{
+  "Server": {
+    "AuthAudience": "netbird-api",
+    "AuthIssuer": "https://zitadel.yourdomain.com",
+    "AuthKeysEndpoint": "https://zitadel.yourdomain.com/oauth/v2/keys"
+  },
+  "Datastore": {
+    "Type": "sqlite",
+    "Path": "/var/lib/netbird/management.db"
+  }
+}

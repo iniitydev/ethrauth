@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ethrVIEW - Unified Platform</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>ethrVIEW</h1>
+        <p>The unified control plane for the EthrPlatform.</p>
+
+        <h2>Onboard New Team Member (`ethrUSER`)</h2>
+        <form id="onboard-form">
+            <label for="email">User Email:</label>
+            <input type="email" id="email" name="email" required placeholder="e.g., alice@example.com">
+            <button type="submit">Onboard User</button>
+        </form>
+
+        <div id="message"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('onboard-form');
+        const message = document.getElementById('message');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = e.target.email.value;
+
+            try {
+                const response = await fetch('/api/onboard-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Onboarding request failed.');
+                }
+
+                const data = await response.json();
+                message.textContent = data.message;
+                message.style.backgroundColor = 'var(--brand-success)';
+            } catch (error) {
+                message.textContent = error.message;
+                message.style.backgroundColor = 'var(--brand-danger)';
+            } finally {
+                message.classList.add('visible');
+                setTimeout(() => {
+                    message.classList.remove('visible');
+                }, 5000); // Hide after 5 seconds
+            }
+        });
+    </script>
+</body>
+</html>
