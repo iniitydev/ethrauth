@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ethrVIEW - User Profile</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>User Profile</h1>
+        <div id="profile-data"></div>
+    </div>
+
+    <script>
+        const profileData = document.getElementById('profile-data');
+
+        async function fetchUserProfile() {
+            const userId = new URLSearchParams(window.location.search).get('user_id');
+            if (!userId) {
+                profileData.innerHTML = '<p>No user ID provided.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/user/${userId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user profile.');
+                }
+                const data = await response.json();
+
+                let html = '<h2>Zitadel</h2>';
+                html += `<pre>${JSON.stringify(data.zitadel_user, null, 2)}</pre>`;
+
+                html += '<h2>NetBird</h2>';
+                html += `<pre>${JSON.stringify(data.netbird_peers, null, 2)}</pre>`;
+
+                html += '<h2>Nextcloud</h2>';
+                html += `<pre>${JSON.stringify(data.nextcloud_user, null, 2)}</pre>`;
+
+                profileData.innerHTML = html;
+            } catch (error) {
+                profileData.innerHTML = `<p>${error.message}</p>`;
+            }
+        }
+
+        fetchUserProfile();
+    </script>
+</body>
+</html>
