@@ -2,6 +2,11 @@ version: '3.8'
 
 services:
   keycloak:
+    # Use production mode (start) instead of dev mode (start-dev) for better performance and security
+    command: start
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       - KC_PROXY=edge
       - KC_HOSTNAME_STRICT=true
@@ -9,15 +14,22 @@ services:
       - KC_HOSTNAME_STRICT_BACKCHANNEL=true
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.keycloak.rule=Host(`auth.yourdomain.com`)"
+      - "traefik.http.routers.keycloak.rule=Host(`${KEYCLOAK_HOSTNAME}`)"
       - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
       - "traefik.http.routers.keycloak.tls=true"
       - "traefik.http.routers.keycloak.tls.certresolver=letsencrypt"
 
   postgres:
     restart: always
+    # Tuned for ~1GB RAM and SSD storage. Adjust shared_buffers/effective_cache_size for larger instances.
+    command: postgres -c shared_buffers=256MB -c effective_cache_size=768MB -c maintenance_work_mem=64MB -c checkpoint_completion_target=0.9 -c wal_buffers=16MB -c default_statistics_target=100 -c random_page_cost=1.1 -c effective_io_concurrency=200 -c work_mem=4MB -c min_wal_size=1GB -c max_wal_size=4GB
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
